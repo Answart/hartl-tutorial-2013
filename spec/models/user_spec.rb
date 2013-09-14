@@ -1,22 +1,20 @@
 require 'spec_helper'
 
 describe User do
-
   before do
     @user = User.new(name: "Example User", email: "user@example.com",
-                     password: "foobar", password_confirmation: "foobar")
+              password: "foobar", password_confirmation: "foobar")
   end
 
   subject { @user }
-
   it { should respond_to(:name) }
   it { should respond_to(:email) }
   it { should respond_to(:password_digest) }
   it { should respond_to(:password) }
   it { should respond_to(:password_confirmation) }
-
-  it { should be_valid }
+  it { should respond_to(:remember_token) }
   it { should respond_to(:authenticate) }
+  it { should be_valid }
 
   # NAME:
   describe "when name is not present" do
@@ -33,7 +31,6 @@ describe User do
     before { @user.email = " " }
     it { should_not be_valid }
   end
-  # email format validation
   describe "when email format is invalid" do
     it "should be invalid" do
       addresses = %w[user@foo,com user_at_foo.org example.user@foo.
@@ -53,20 +50,15 @@ describe User do
       end
     end
   end
-  # test for the rejection of duplicate email addresses
   describe "when email address is already taken" do
     before do
       user_with_same_email = @user.dup
       user_with_same_email.save
     end
-
     it { should_not be_valid }
   end
-  #  test uses the reload method for reloading a value
-  # from the database and the eq method for testing equality.
   describe "email address with mixed case" do
     let(:mixed_case_email) { "Foo@ExAMPle.CoM" }
-
     it "should be saved as all lower-case" do
       @user.email = mixed_case_email
       @user.save
@@ -75,7 +67,6 @@ describe User do
   end
 
   # PASSWORD:
-  # validate password presence, don’t want users to enter a blank password
   describe "when password is not present" do
     before do
       @user = User.new(name: "Example User", email: "user@example.com",
@@ -83,35 +74,25 @@ describe User do
     end
     it { should_not be_valid }
   end
-  # ensure that the password and confirmation match
   describe "when password doesn't match confirmation" do
     before { @user.password_confirmation = "mismatch" }
     it { should_not be_valid }
   end
-  # test for a length validation on passwords, requiring that they be at least six characters long
   describe "with a password that's too short" do
     before { @user.password = @user.password_confirmation = "a" * 5 }
     it { should be_invalid }
   end
-  
-
   describe "with a password that's too short" do
     before { @user.password = @user.password_confirmation = "a" * 5 }
     it { should be_invalid }
   end
 
-  # retrieve users based on their email then password
   describe "return value of authenticate method" do
-  	# 'before' saves the user to the database so that it can be 
-  	# retrieved using find_by, which we accomplish using the let method
-    before { @user.save }
-    # first, find a user by email address
+  	before { @user.save }
     let(:found_user) { User.find_by(email: @user.email) }
-    # second, authenticate the user with a given password
     describe "with valid password" do
       it { should eq found_user.authenticate(@user.password) }
     end
-    # if, password != work
     describe "with invalid password" do
       let(:user_for_invalid_password) { found_user.authenticate("invalid") }
 
@@ -120,4 +101,8 @@ describe User do
     end
   end
 
+  describe "remember token" do
+    before { @user.save }
+    its(:remember_token) { should_not be_blank }
+  end
 end

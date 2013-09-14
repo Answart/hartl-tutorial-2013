@@ -2,12 +2,9 @@ require 'spec_helper'
 
 describe "Static pages" do
   subject { page }
-  # let(:base_title) { "Ruby on Rails Tutorial Sample App" }
-
-  # shared examples to eliminate the kind of duplication
+  
   shared_examples_for "all static pages" do
     it { should have_selector('h1', text: heading) }
-    # this = spec/support/utilities.rb
     it { should have_title(full_title(page_title)) }
   end
 
@@ -44,7 +41,6 @@ describe "Static pages" do
     let(:page_title) { '' }
   end
 
-  # 
   it "should have the right links on the layout" do
     visit root_path
     # header
@@ -53,8 +49,8 @@ describe "Static pages" do
     click_link "Home"
     click_link "Help"
     expect(page).to have_title(full_title('Help'))
-    click_link "Sign up"
-    expect(page).to have_title(full_title('Sign up'))
+    #click_link "Sign up"
+    #expect(page).to have_title(full_title('Sign up'))
     # footer
     click_link "About"
     expect(page).to have_title(full_title('About Us'))

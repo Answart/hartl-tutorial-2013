@@ -2,10 +2,11 @@ require 'spec_helper'
 
 describe "Authentication" do
   subject { page }
+  let(:login) { "Sign in" }
+  let(:user) { FactoryGirl.create(:user) }
 
   describe "signin page" do
     before { visit signin_path }
-  	let(:login) { "Sign in" }
     it { should have_content('Sign in') }
     it { should have_title('Sign in') }
 
@@ -18,10 +19,11 @@ describe "Authentication" do
         before { click_link "Home" }
         it { should_not have_selector('div.alert.alert-error') }
       end
+      it { should_not have_link('Profile')}
+      it { should_not have_link('Settings')}
     end
 
     describe "with valid information" do
-      let(:user) { FactoryGirl.create(:user) }
       before { valid_signin(user) }
       it { should have_title(user.name) }
       it { should have_link('Users',       href: users_path) }
@@ -33,22 +35,30 @@ describe "Authentication" do
   end
 
   describe "authorization" do
-
     describe "for non-signed-in users" do
-      let(:user) { FactoryGirl.create(:user) }
 
       describe "when attempting to visit a protected page" do
         before do
           visit edit_user_path(user)
-          fill_in "Email",    with: user.email
-          fill_in "Password", with: user.password
-          click_button "Sign in"
+          valid_signin(user)
         end
 
         describe "after signing in" do
           it "should render the desired protected page" do
             expect(page).to have_title('Edit user')
           end
+
+          describe "when signing in again" do
+            before do
+              delete signout_path
+              visit signin_path
+              valid_signin(user)
+            end
+            it "should render the default (profile) page" do
+              expect(page).to have_title(user.name)
+            end
+          end
+
         end
       end
 
@@ -71,9 +81,7 @@ describe "Authentication" do
     end
 
     describe "as non-admin user" do
-      let(:user) { FactoryGirl.create(:user) }
       let(:non_admin) { FactoryGirl.create(:user) }
-
       before { sign_in non_admin, no_capybara: true }
 
       describe "submitting a DELETE request to the Users#destroy action" do
@@ -83,7 +91,6 @@ describe "Authentication" do
     end
 
     describe "as wrong user" do
-      let(:user) { FactoryGirl.create(:user) }
       let(:wrong_user) { FactoryGirl.create(:user, email: "wrong@example.com") }
       before { sign_in user, no_capybara: true }
 
@@ -98,7 +105,27 @@ describe "Authentication" do
         specify { expect(response).to redirect_to(root_url) }
       end
     end
+
+    describe "for signed in users" do
+      before { sign_in user, no_capybara: true  }
+
+      describe "using 'new' action" do
+        before { get new_user_path }
+        specify { response.should redirect_to(root_path) }
+        it { should_not have_selector 'title', text: full_title('Sign Up') }
+      end
+      describe "using 'create' action" do
+        before do
+          @user_new = {name: "Example User", 
+                   email: "user@example.com", 
+                   password: "foobar", 
+                   password_confirmation: "foobar"}
+          post users_path, user: @user_new 
+        end
+        specify { response.should redirect_to(root_path) }
+        it { should_not have_selector 'title', text: full_title('Sign Up') }
+      end    
+    end
+
   end
-
-
 end

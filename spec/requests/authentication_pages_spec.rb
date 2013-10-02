@@ -3,7 +3,11 @@ require 'spec_helper'
 describe "Authentication" do
   subject { page }
   let(:login) { "Sign in" }
+  let(:signup) { "Create my account" }
+  
   let(:user) { FactoryGirl.create(:user) }
+  let(:admin) { FactoryGirl.create(:admin) }
+  let(:non_admin) { FactoryGirl.create(:user) }
 
   describe "signin page" do
     before { visit signin_path }
@@ -13,14 +17,15 @@ describe "Authentication" do
     describe "with invalid information" do
       before { click_button login }
       it { should have_title('Sign in') }
-      it { should have_selector('div.alert.alert-error', text: 'Invalid') }
+      it { should have_error_message('Invalid') } 
+      #it { should have_selector('div.alert.alert-error', text: 'Invalid') }
+      it { should_not have_link('Profile')}
+      it { should_not have_link('Settings')}
 
       describe "after visiting another page" do
         before { click_link "Home" }
         it { should_not have_selector('div.alert.alert-error') }
       end
-      it { should_not have_link('Profile')}
-      it { should_not have_link('Settings')}
     end
 
     describe "with valid information" do
@@ -58,7 +63,17 @@ describe "Authentication" do
               expect(page).to have_title(user.name)
             end
           end
+        end
+      end
 
+      describe "in the Microposts controller" do
+        describe "submitting to the 'create' action" do
+          before { post microposts_path }
+          specify { expect(response).to redirect_to(signin_path) }
+        end
+        describe "submitting to the 'destroy' action" do
+          before { delete micropost_path(FactoryGirl.create(:micropost)) }
+          specify { expect(response).to redirect_to(signin_path) }
         end
       end
 
@@ -81,9 +96,11 @@ describe "Authentication" do
     end
 
     describe "as non-admin user" do
-      let(:non_admin) { FactoryGirl.create(:user) }
       before { sign_in non_admin, no_capybara: true }
 
+      describe "should render the non-admin profile page" do
+        it { should_not have_selector('title', text: admin.name) }
+      end
       describe "submitting a DELETE request to the Users#destroy action" do
         before { delete user_path(user) }
         specify { expect(response).to redirect_to(root_url) }
@@ -104,6 +121,9 @@ describe "Authentication" do
         before { patch user_path(wrong_user) }
         specify { expect(response).to redirect_to(root_url) }
       end
+      describe "links do not appear on other's microposts" do
+        # to do
+      end
     end
 
     describe "for signed in users" do
@@ -112,7 +132,7 @@ describe "Authentication" do
       describe "using 'new' action" do
         before { get new_user_path }
         specify { response.should redirect_to(root_path) }
-        it { should_not have_selector 'title', text: full_title('Sign Up') }
+        #it { should_not have_selector 'title', text: full_title('Sign Up') }
       end
       describe "using 'create' action" do
         before do
@@ -125,6 +145,35 @@ describe "Authentication" do
         specify { response.should redirect_to(root_path) }
         it { should_not have_selector 'title', text: full_title('Sign Up') }
       end    
+    end
+
+    describe "admin users" do
+      let!(:user){FactoryGirl.create(:user)}
+      let!(:admin){FactoryGirl.create(:admin)}
+      let!(:non_admin){FactoryGirl.create(:user)}
+      before do
+        sign_in admin, no_capybara: true
+      end
+
+      describe "cannot destroy themself" do
+        before { delete user_path(admin) }
+        specify { response.should_not be_success }
+        specify { expect(admin.reload).to be_admin }
+        it "which doesn't change User count" do
+          expect { delete user_path(admin) }.not_to change(User, :count)
+          expect { delete user_path(admin) }.to change{User.count}.by(0)
+          expect { delete user_path(admin) }.to change(User, :count).by(0)
+        end 
+      end
+      #describe "can destroy normal users" do
+        #before { delete user_path(user) }
+        #specify { response.should be_success }
+        #specify { response.should redirect_to(users_path) }
+        #it "which lowers User count" do
+          #expect { delete user_path(user) }.to change(User, :count).by(-1)
+          #expect { delete user_path(user) }.to change{User.count}.by(-1)
+        #end
+      #end
     end
 
   end

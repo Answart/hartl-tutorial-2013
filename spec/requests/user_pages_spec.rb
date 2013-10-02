@@ -3,12 +3,15 @@ require 'spec_helper'
 describe "User pages" do
   subject { page }
   let(:login) { "Sign in" }
-  let(:savechanges) { "Save changes" }
   let(:signup) { "Create my account" }
+  let(:savechanges) { "Save changes" }
+
   let(:user) { FactoryGirl.create(:user) } # AKA spec/factories.rb
+  let(:admin) { FactoryGirl.create(:admin) }
+  let(:non_admin) { FactoryGirl.create(:user) }
 
   describe "index" do
-    before(:each) do
+    before do # before(:each) do
       sign_in user
       visit users_path
     end
@@ -30,7 +33,7 @@ describe "User pages" do
       it { should_not have_link('delete') }
 
       describe "as an admin user" do
-        let(:admin) { FactoryGirl.create(:admin) }
+        #let(:admin) { FactoryGirl.create(:admin) }
         before do
           sign_in admin
           visit users_path
@@ -47,9 +50,17 @@ describe "User pages" do
   end
 
   describe "profile page" do
+    let!(:m1) { FactoryGirl.create(:micropost, user: user, content: "Foo") }
+    let!(:m2) { FactoryGirl.create(:micropost, user: user, content: "Bar") }
     before { visit user_path(user) }
     it { should have_content(user.name) }
     it { should have_title(user.name) }
+
+    describe "microposts" do
+      it { should have_content(m1.content) }
+      it { should have_content(m2.content) }
+      it { should have_content(user.microposts.count) }
+    end
   end
 
   describe "signup page" do
@@ -109,11 +120,12 @@ describe "User pages" do
       let(:new_name)  { "New Name" }
       let(:new_email) { "new@example.com" }
       before do
-        fill_in "Name",             with: new_name
-        fill_in "Email",            with: new_email
-        fill_in "Password",         with: user.password
-        fill_in "Confirm Password", with: user.password
-        click_button savechanges
+        valid_savechange(user)
+        #fill_in "Name",             with: new_name
+        #fill_in "Email",            with: new_email
+        #fill_in "Password",         with: user.password
+        #fill_in "Confirm Password", with: user.password
+        #click_button savechanges
       end
 
       it { should have_title(new_name) }

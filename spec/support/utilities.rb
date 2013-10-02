@@ -12,6 +12,12 @@ RSpec::Matchers.define :have_error_message do |message|
   end
 end
 
+RSpec::Matchers.define :have_success_message do |message|
+    match do |page|
+        page.should have_selector('div.alert.alert-success', text: message)
+    end
+end
+
 def sign_in(user, options={})
   if options[:no_capybara]
     remember_token = User.new_remember_token
@@ -23,4 +29,12 @@ def sign_in(user, options={})
     fill_in "Password", with: user.password
     click_button login
   end
+end
+
+def valid_savechange(user)
+  fill_in "Name",             with: new_name
+  fill_in "Email",            with: new_email
+  fill_in "Password",         with: user.password
+  fill_in "Confirm Password", with: user.password
+  click_button savechanges
 end
